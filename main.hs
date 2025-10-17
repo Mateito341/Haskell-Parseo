@@ -231,7 +231,23 @@ factor = do
         char ')'
         return e)
 
--- Ejemplos de uso:
--- parseExpression "2+3*4"     -- BinOp Add (Num 2) (BinOp Mul (Num 3) (Num 4))
--- parseExpression "(2+3)*4"   -- BinOp Mul (BinOp Add (Num 2) (Num 3)) (Num 4)
--- parseExpression "10-5/2"    -- BinOp Res (Num 10) (BinOp Div (Num 5) (Num 2))
+-- Ejemplos:
+-- expr "2+3*4"     -- BinOp Add (Num 2) (BinOp Mul (Num 3) (Num 4))
+-- expr "(2+3)*4"   -- BinOp Mul (BinOp Add (Num 2) (Num 3)) (Num 4)
+-- expr "10-5/2"    -- BinOp Res (Num 10) (BinOp Div (Num 5) (Num 2))
+
+-- Ejercicio 10
+
+lista :: Parser [Int]
+lista = sepBy int space
+
+matriz :: Parser [[Int]]
+matriz = do
+    char '['
+    filas <- sepBy lista (char ';')
+    char ']'
+    return filas
+
+-- Ejemplo
+-- ghci> parse matriz "[1 2 3;4 5 6;7 8 9]"
+-- [([[1,2,3],[4,5,6],[7,8,9]],"")]
