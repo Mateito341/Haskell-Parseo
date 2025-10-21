@@ -251,3 +251,88 @@ matriz = do
 -- Ejemplo
 -- ghci> parse matriz "[1 2 3;4 5 6;7 8 9]"
 -- [([[1,2,3],[4,5,6],[7,8,9]],"")]
+
+-- Ejercicio 11
+
+{-
+OrExpr  -> OrExpr 'or' AndExpr | AndExpr
+AndExpr -> AndExpr 'and' Factor  | Factor
+Factor  -> 'not' Factor | '(' OrExpr ')' | Bool
+Bool    -> 'True' | 'False'
+
+-------------------
+Elimino recurion izquierda
+
+Eval -> Orexpr
+
+OrExpr -> AndExpr OrExpr'
+OrExpr' -> 'or' AndExpr OrExpr' | e
+
+AndExpr -> Factor AndExpr'
+AndExpr -> 'and' Factor AndExpr' | e
+
+Factor -> 'not' Factor | '('OrExpr')' | Bool
+
+Bool -> 'True' | 'False'
+-}
+
+data BoolExpr = BVal Bool
+                | Not BoolExpr
+                | And BoolExpr BoolExpr
+                | Or BoolExpr BoolExpr
+                deriving Show
+
+orExpr :: Parser BoolExpr
+orExpr = do t <- andExpr
+            f <- orExpr'
+            return (f t)
+
+orExpr' :: Parser (BoolExpr -> BoolExpr)
+orExpr' = do token (string "or")
+             t <- andExpr
+             f' <- orExpr'
+             return (f'.(\x ->Or x t))
+          <|> return id
+
+andExpr :: Parser BoolExpr
+andExpr = do t <- factorr
+             f <- andExpr'
+             return (f t)
+
+andExpr' :: Parser (BoolExpr -> BoolExpr)
+andExpr' = do token (string "and")
+              t <- factorr
+              f' <- andExpr'
+              return (f'.(\x ->And x t))
+           <|> return id
+
+factorr :: Parser BoolExpr
+factorr =
+  (do
+    token (string "not")
+    t <- factorr
+    return (Not t))
+  <|> (do
+    char '('
+    t <- orExpr
+    char ')'
+    return t)
+  <|> bool
+
+
+bool :: Parser BoolExpr
+bool =
+  (do
+    token (string "True")
+    return (BVal True))
+  <|> (do
+    token (string "False")
+    return (BVal False))
+
+
+eval :: String -> BoolExpr
+eval xs = fst (head (parse orExpr xs))
+
+-- Ejemplo:
+-- *Main> eval "not (True or False and True)"
+-- Not (Or (BVal True) (And (BVal False) (BVal True)))
