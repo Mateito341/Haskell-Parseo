@@ -159,9 +159,20 @@ heterogeneas = do
 -- *Main> parse heterogeneas "[3,'z','r',7,9,22,'1']"
 -- [([HInt 3,HChar 'z',HChar 'r',HInt 7,HInt 9,HInt 22,HChar '1'],"")]
 
--- Ejercicio 8
+-- Ejercicio 8/9
 
 {-
+expr -> expr ('+' term | '-' term) | term
+
+term -> term ('*' factor | '/' factor)| term
+
+factor -> digit | '(' expr ')'
+
+digit -> '0' | '1' | ... | '9'
+
+------------------
+Elimino la recursion
+-----------------
 expr -> term expr'
 expr' -> ('+' term | '-' term) expr' | e
 
@@ -181,60 +192,55 @@ data Expr = Num Int | BinOp Op Expr Expr
 data Op = Add | Mul | Res | Div
     deriving (Show, Eq)
 
--- expr -> term expr'
 expr :: Parser Expr
-expr = do
-    t <- term
-    expr' t
+expr = do t <- term
+          e <- expr'
+          return (e t)
 
--- expr' -> ('+' term | '-' term) expr' | e
-expr' :: Expr -> Parser Expr
-expr' left = do
-    (do
-        char '+'
-        t <- term
-        expr' (BinOp Add left t)
-     <|> do
-        char '-'
-        t <- term
-        expr' (BinOp Res left t)
-     <|> return left)
+expr' :: Parser (Expr -> Expr)
+expr' = do char '+'
+           t <- term
+           e' <- expr'
+           return (e'.(\x -> BinOp Add x t))
+         <|>
+           do char '-'
+              t <- term
+              e' <- expr'
+              return (e'.(\x ->BinOp Res x t))
+         <|> return id
 
--- term -> factor term'
 term :: Parser Expr
-term = do
-    f <- factor
-    term' f
+term = do t <- factor
+          e <- term'
+          return (e t)
 
--- term' -> ('*' factor | '/' factor) term' | e
-term' :: Expr -> Parser Expr
-term' left = do
-    (do
-        char '*'
-        f <- factor
-        term' (BinOp Mul left f)
-     <|> do
-        char '/'
-        f <- factor
-        term' (BinOp Div left f)
-     <|> return left)
+term' :: Parser (Expr -> Expr)
+term' = do char '*'
+           t <- factor
+           e' <- term'
+           return (e'.(\x -> BinOp Mul x t))
+         <|>
+           do char '/'
+              t <- factor
+              e' <- term'
+              return (e'.(\x ->BinOp Div x t))
+          <|> return id
 
--- factor -> digit | '(' expr ')'
 factor :: Parser Expr
-factor = do
-    (do
-        d <- digit
-        return (Num (read [d]))
-     <|> do
-        char '('
-        e <- expr
-        char ')'
-        return e)
+factor = do d <- nat
+            return (Num d)
+          <|> do char '('
+                 e <- expr
+                 char ')'
+                 return e
 
--- Ejemplos:
--- expr "2+3*4"     -- BinOp Add (Num 2) (BinOp Mul (Num 3) (Num 4))
--- expr "(2+3)*4"   -- BinOp Mul (BinOp Add (Num 2) (Num 3)) (Num 4)
--- expr "10-5/2"    -- BinOp Res (Num 10) (BinOp Div (Num 5) (Num 2))
+evall :: String -> Expr
+evall xs = fst (head (parse expr xs))
+
+
+
+-- Ejemplo:
+-- evall "2+3*4"     -- BinOp Add (Num 2) (BinOp Mul (Num 3) (Num 4))
 
 -- Ejercicio 10
 
